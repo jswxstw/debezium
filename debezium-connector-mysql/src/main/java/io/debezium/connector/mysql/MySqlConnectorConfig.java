@@ -163,6 +163,24 @@ public class MySqlConnectorConfig extends BinlogConnectorConfig {
             .withImportance(Importance.LOW)
             .withDescription("JDBC protocol to use with the driver.");
 
+    public static final Field CHARACTER_ENCODING = Field.create(DATABASE_CONFIG_PREFIX + "characterEncoding")
+            .withDisplayName("Character Encoding")
+            .withType(Type.STRING)
+            .withGroup(Field.createGroupEntry(Field.Group.CONNECTION, 43))
+            .withWidth(Width.SHORT)
+            .withDefault("UTF-8")
+            .withImportance(Importance.LOW)
+            .withDescription("Character encoding to use with the driver.");
+
+    public static final Field CHARACTER_SET_RESULTS = Field.create(DATABASE_CONFIG_PREFIX + "characterSetResults")
+            .withDisplayName("Character Set Results")
+            .withType(Type.STRING)
+            .withGroup(Field.createGroupEntry(Field.Group.CONNECTION, 44))
+            .withWidth(Width.SHORT)
+            .withDefault("UTF-8")
+            .withImportance(Importance.LOW)
+            .withDescription("Character set results to use with the driver.");
+
     /**
      * A comma-separated list of regular expressions that match source UUIDs in the GTID set used to find the binlog
      * position in the MySQL server. Only the GTID ranges that have sources matching one of these include patterns will
@@ -209,7 +227,9 @@ public class MySqlConnectorConfig extends BinlogConnectorConfig {
                     BinlogConnectorConfig.GTID_SOURCE_EXCLUDES)
             .type(
                     JDBC_DRIVER,
-                    JDBC_PROTOCOL)
+                    JDBC_PROTOCOL,
+                    CHARACTER_ENCODING,
+                    CHARACTER_SET_RESULTS)
             .connector(SNAPSHOT_LOCKING_MODE)
             .events(
                     GTID_SOURCE_INCLUDES,

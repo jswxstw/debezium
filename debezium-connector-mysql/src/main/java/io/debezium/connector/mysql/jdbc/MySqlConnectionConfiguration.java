@@ -19,7 +19,7 @@ import io.debezium.util.Strings;
 public class MySqlConnectionConfiguration extends BinlogConnectionConfiguration {
 
     private static final String JDBC_PROPERTY_CONNECTION_TIME_ZONE = "connectionTimeZone";
-    public static final String URL_PATTERN = "${protocol}://${hostname}:${port}/?useInformationSchema=true&nullCatalogMeansCurrent=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=CONVERT_TO_NULL&connectTimeout=${connectTimeout}";
+    public static final String URL_PATTERN = "${protocol}://${hostname}:${port}/?useInformationSchema=true&nullCatalogMeansCurrent=false&useUnicode=true&characterEncoding=${characterEncoding}&characterSetResults=${characterSetResults}&zeroDateTimeBehavior=CONVERT_TO_NULL&connectTimeout=${connectTimeout}";
 
     public MySqlConnectionConfiguration(Configuration config) {
         super(config);
@@ -40,6 +40,8 @@ public class MySqlConnectionConfiguration extends BinlogConnectionConfiguration 
     protected Configuration.Builder getDatabaseConfiguration(Configuration configuration) {
         Configuration.Builder builder = super.getDatabaseConfiguration(configuration);
         builder.withDefault(MySqlConnectorConfig.JDBC_PROTOCOL, MySqlConnectorConfig.JDBC_PROTOCOL.defaultValue());
+        builder.withDefault(MySqlConnectorConfig.CHARACTER_ENCODING, MySqlConnectorConfig.CHARACTER_ENCODING.defaultValue());
+        builder.withDefault(MySqlConnectorConfig.CHARACTER_SET_RESULTS, MySqlConnectorConfig.CHARACTER_SET_RESULTS.defaultValue());
         return builder;
     }
 
@@ -55,6 +57,8 @@ public class MySqlConnectionConfiguration extends BinlogConnectionConfiguration 
                 URL_PATTERN,
                 driverClassName,
                 getClass().getClassLoader(),
-                MySqlConnectorConfig.JDBC_PROTOCOL);
+                MySqlConnectorConfig.JDBC_PROTOCOL,
+                MySqlConnectorConfig.CHARACTER_ENCODING,
+                MySqlConnectorConfig.CHARACTER_SET_RESULTS);
     }
 }
