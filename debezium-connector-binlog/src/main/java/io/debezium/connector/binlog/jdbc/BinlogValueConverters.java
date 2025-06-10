@@ -9,10 +9,9 @@ import static io.debezium.config.CommonConnectorConfig.EventConvertingFailureHan
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.charset.Charset;
-import java.nio.charset.IllegalCharsetNameException;
-import java.nio.charset.StandardCharsets;
+import java.nio.charset.*;
 import java.sql.Blob;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -369,6 +368,19 @@ public abstract class BinlogValueConverters extends JdbcValueConverters {
                 ": class=" + clazzName);
     }
 
+    private boolean isValidUTF8(byte[] data) {
+        CharsetDecoder decoder = StandardCharsets.UTF_8.newDecoder();
+        decoder.onMalformedInput(CodingErrorAction.REPORT);
+        decoder.onUnmappableCharacter(CodingErrorAction.REPORT);
+        try {
+            decoder.decode(ByteBuffer.wrap(data));
+            return true;
+        }
+        catch (CharacterCodingException e) {
+            return false;
+        }
+    }
+
     /**
      * Convert the {@link String} or {@code byte[]} value to a string value used in a {@link SourceRecord}.
      *
@@ -381,12 +393,23 @@ public abstract class BinlogValueConverters extends JdbcValueConverters {
      */
     protected Object convertString(Column column, Field fieldDefn, Charset columnCharset, Object data) {
         return convertValue(column, fieldDefn, data, "", (r) -> {
+            byte[] bytes = null;
             if (data instanceof byte[]) {
-                // Decode the binary representation using the given character encoding ...
-                r.deliver(new String((byte[]) data, columnCharset));
+                bytes = (byte[]) data;
             }
             else if (data instanceof String) {
-                r.deliver(data);
+                bytes = ((String) data).getBytes(columnCharset);
+            }
+            if (bytes == null) {
+                return;
+            }
+            if (isValidUTF8(bytes)) {
+                // Decode the binary representation using UTF_8 character encoding ...
+                r.deliver(new String(bytes, StandardCharsets.UTF_8));
+            }
+            else {
+                // Decode the binary representation using the given character encoding ...
+                r.deliver(new String(bytes, columnCharset));
             }
         });
     }
@@ -535,26 +558,11 @@ public abstract class BinlogValueConverters extends JdbcValueConverters {
      * @return the Java {@link Charset}, or null if there is no mapping
      */
     protected Charset charsetFor(Column column) {
-        String databaseCharSetName = column.charsetName();
-        if (databaseCharSetName == null) {
-            logger.warn("Column is missing a character set: {}", column);
-            return null;
+        try {
+            return Charset.forName(column.charsetName());
         }
-        String encoding = getJavaEncodingForCharSet(databaseCharSetName);
-        if (encoding == null) {
-            logger.debug("Column uses database character set '{}', which has no mapping to a Java character set, will try it in lowercase", databaseCharSetName);
-            encoding = getJavaEncodingForCharSet(databaseCharSetName.toLowerCase());
-        }
-        if (encoding == null) {
-            logger.warn("Column uses database character set '{}', which has no mapping to a Java character set", databaseCharSetName);
-        }
-        else {
-            try {
-                return Charset.forName(encoding);
-            }
-            catch (IllegalCharsetNameException e) {
-                logger.error("Unable to load Java charset '{}' for column with database character set '{}'", encoding, databaseCharSetName);
-            }
+        catch (IllegalCharsetNameException e) {
+            logger.error("Unable to load Java charset '{}' for column", column.charsetName());
         }
         return null;
     }
